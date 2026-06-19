@@ -15628,6 +15628,9 @@ var path3 = __toESM(require("path"));
 
 // src/frontmatter.ts
 var FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 function parseFrontmatter(raw) {
   const match = raw.match(FM_RE);
   if (!match) return { data: {}, content: raw };
@@ -15710,7 +15713,7 @@ function parseYamlish(body) {
   }
   for (const [k, v] of Object.entries(data)) {
     if (Array.isArray(v) && v.length === 0 && !hadBlockItems(body, k)) {
-      if (!new RegExp(`^${k}:\\s*\\[\\s*\\]\\s*$`, "m").test(body)) delete data[k];
+      if (!new RegExp(`^${escapeRegExp(k)}:\\s*\\[\\s*\\]\\s*$`, "m").test(body)) delete data[k];
     }
   }
   return data;
@@ -15721,7 +15724,7 @@ function lastArrayKey(data) {
   return found;
 }
 function hadBlockItems(body, key) {
-  const re = new RegExp(`^${key}:\\s*\\n(\\s+-\\s+.+\\n)+`, "m");
+  const re = new RegExp(`^${escapeRegExp(key)}:\\s*\\n(\\s+-\\s+.+\\n)+`, "m");
   return re.test(body);
 }
 function serializeValue(v) {

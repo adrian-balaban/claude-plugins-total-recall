@@ -160,4 +160,20 @@ describe('frontmatter — DoS immunity', () => {
     expect(content).toBe('body\n');
     expect(ms).toBeLessThan(100); // linear; no quadratic blowup
   });
+
+  it('treats a frontmatter key with regex metacharacters as literal (escapeRegExp)', () => {
+    // Keys are interpolated into a RegExp to detect `key: []` / block items.
+    // Without escaping, a key like `(a+)+` becomes the regex `^(a+)+:`, which
+    // fails to match the literal text `(a+)+: []` (the `(` is not `a`), so the
+    // "explicit empty array" guard wrongly DELETES the key. Escaping makes the
+    // key match literally. This is a correctness guard, not just defense-in-depth:
+    // a teammate can push an org-vault memory whose key contains metacharacters.
+    const raw = `---\n(a+)+: []\ntitle: T\n---\nbody\n`;
+    const start = Date.now();
+    const { data } = parseFrontmatter(raw);
+    const ms = Date.now() - start;
+    expect(data.title).toBe('T');
+    expect(data['(a+)+']).toEqual([]); // explicit `[]` must be KEPT, not dropped
+    expect(ms).toBeLessThan(100);
+  });
 });

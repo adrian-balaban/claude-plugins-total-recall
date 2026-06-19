@@ -18,6 +18,17 @@ export interface Frontmatter {
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
+// Escape regex metacharacters in a parsed frontmatter KEY before interpolating it
+// into a RegExp. Frontmatter keys come from `^([^:\s]+):` in parseYamlish, so a
+// key may legitimately contain metacharacters like `()[]{}*+?|.\^$`. A crafted
+// key (e.g. `(a+)+`) interpolated raw into `new RegExp(\`^${key}:\`)` allows
+// catastrophic backtracking (ReDoS) — and because the org vault is shared via
+// git, one malicious teammate could hang every member's boot (parseFrontmatter
+// runs over all vault files at boot via reconcileIndex). Escape first.
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function parseFrontmatter(raw: string): Frontmatter {
   const match = raw.match(FM_RE);
   if (!match) return { data: {}, content: raw };
@@ -124,7 +135,7 @@ function parseYamlish(body: string): Record<string, unknown> {
     if (Array.isArray(v) && v.length === 0 && !hadBlockItems(body, k)) {
       // Keep empty arrays only if explicitly written as `[]`; a bare `key:` with
       // no items is treated as absent.
-      if (!new RegExp(`^${k}:\\s*\\[\\s*\\]\\s*$`, 'm').test(body)) delete data[k];
+      if (!new RegExp(`^${escapeRegExp(k)}:\\s*\\[\\s*\\]\\s*$`, 'm').test(body)) delete data[k];
     }
   }
   return data;
@@ -138,7 +149,7 @@ function lastArrayKey(data: Record<string, unknown>): string | null {
 
 function hadBlockItems(body: string, key: string): boolean {
   // True if `key:` is followed by indented "- " items before the next non-indented line.
-  const re = new RegExp(`^${key}:\\s*\\n(\\s+-\\s+.+\\n)+`, 'm');
+  const re = new RegExp(`^${escapeRegExp(key)}:\\s*\\n(\\s+-\\s+.+\\n)+`, 'm');
   return re.test(body);
 }
 
