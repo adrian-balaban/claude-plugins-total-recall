@@ -331,7 +331,7 @@ Configuration in `~/.total-recall/config.json`:
 | `journal` entries written only on `store_memory`, personal only | `store.ts` — `if (!isOrg) appendJournal(...)` |
 | `sessions` capped at 50, deduplicated | `mutate.ts` — `update_memory` |
 | Optional deps (`@huggingface/transformers`, `sqlite-vec`, `better-sqlite3`) never bundled | `tsconfig.json` + esbuild `--external` |
-| `category` cannot escape its vault (path-traversal containment) | `store.ts` — resolves `<vault>/<category>` and rejects if it falls outside the vault root |
+| `category` cannot escape its vault (path-traversal containment) | `store.ts` — resolves `<vault>/<category>` and rejects if it falls outside the vault root; the guard runs **before** `ensureDir`, so a traversal `category` cannot even create a stray directory outside the vault |
 | Org-author guard ignores any caller-supplied `author` | `store.ts` — `effectiveAuthor = os.userInfo().username` for org; the `author` arg is ignored for org memories, so `force=true` cannot impersonate another author |
 | Index files written atomically (write-`.tmp` + rename) | `persistence.ts` — `atomicWrite()` for `index.json`, `invertedIndex.json`, `.index-cache.txt`; no partial/truncated index on crash |
 | Frontmatter scalars reject embedded newlines | `frontmatter.ts` — `serializeArrayItem`/`serializeString` throw on `/[\r\n]/`; prevents a newline in `title`/`tags` from injecting a new frontmatter key |

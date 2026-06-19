@@ -120,13 +120,18 @@ describe('store_memory', () => {
   });
 
   it('rejects a category that escapes the vault (path traversal)', async () => {
+    const category = '../../../tr-traversal-leak';
     const res = await callTool('store_memory', {
-      title: 'Escape', content: 'X', tags: [], category: '../../../tmp',
+      title: 'Escape', content: 'X', tags: [], category,
     });
     expect(res.isError).toBe(true);
     expect(res.content[0].text).toContain('outside the vault');
-    // Nothing was written outside the vault.
-    expect(fs.existsSync(path.join(os.tmpdir(), 'escape.md'))).toBe(false);
+    // Nothing was written or created outside the vault — neither the .md file
+    // nor the directory the traversal would have mkdir'd via ensureDir. The
+    // guard must reject BEFORE ensureDir runs, or a stray dir leaks outside.
+    const traversalDir = path.resolve(path.join(VAULT, 'personal-vault', category));
+    expect(fs.existsSync(path.join(traversalDir, 'escape.md'))).toBe(false);
+    expect(fs.existsSync(traversalDir)).toBe(false);
   });
 
   it('ignores a caller-supplied author for org (no impersonation bypass)', async () => {

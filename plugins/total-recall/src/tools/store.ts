@@ -24,17 +24,18 @@ export function storeMemory(args: any): any {
   const catDir = isOrg
     ? path.join(ORG_VAULT, category)
     : path.join(PERSONAL_VAULT, category);
-  ensureDir(catDir);
   const filePath = path.join(catDir, `${slug}.md`);
   const key = keyFromPath(filePath, isOrg);
   // Path-containment guard: `category` is caller-supplied, so a value like
-  // "../.." resolves outside the vault and would write an arbitrary file. Resolve
-  // and confirm the final path stays inside the chosen vault before touching it.
+  // "../.." resolves outside the vault and would write an arbitrary file — and,
+  // via ensureDir below, create an arbitrary directory. Resolve and confirm the
+  // final path stays inside the chosen vault BEFORE creating anything on disk.
   const vaultRoot = path.resolve(isOrg ? ORG_VAULT : PERSONAL_VAULT);
   const resolved = path.resolve(filePath);
   if (resolved !== vaultRoot && !resolved.startsWith(vaultRoot + path.sep)) {
     throw new Error(`Invalid category "${category}": resolves outside the vault.`);
   }
+  ensureDir(catDir);
   // Org memories are always attributed to the real OS user — never trust a
   // caller-supplied `author` for org, or any caller could pass the existing
   // author's name and bypass the org-author guard below. Personal memories may

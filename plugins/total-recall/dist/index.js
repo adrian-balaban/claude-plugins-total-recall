@@ -15969,7 +15969,6 @@ function storeMemory(args) {
   if (isOrg && isPersonal) throw new Error("Memory cannot have both 'org' and 'personal' tags.");
   const slug = slugify2(title);
   const catDir = isOrg ? path5.join(ORG_VAULT, category) : path5.join(PERSONAL_VAULT, category);
-  ensureDir(catDir);
   const filePath = path5.join(catDir, `${slug}.md`);
   const key = keyFromPath(filePath, isOrg);
   const vaultRoot = path5.resolve(isOrg ? ORG_VAULT : PERSONAL_VAULT);
@@ -15977,6 +15976,7 @@ function storeMemory(args) {
   if (resolved !== vaultRoot && !resolved.startsWith(vaultRoot + path5.sep)) {
     throw new Error(`Invalid category "${category}": resolves outside the vault.`);
   }
+  ensureDir(catDir);
   const osUser = os2.userInfo().username;
   const effectiveAuthor = isOrg ? osUser : author ?? osUser;
   let preservedCreated;
