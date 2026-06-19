@@ -33,5 +33,5 @@ $INDEX_CONTENT"
 # silently dropped (verified against the Claude Code hooks reference). Without it,
 # the injected memory index — the plugin's core feature — never reached Claude.
 # JSON-encode via node (node is this plugin's hard dependency; python3 is not).
-ADDCONTEXT=$(printf '%s' "$INSTRUCTIONS" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))')
+ADDCONTEXT=$(printf '%s' "$INSTRUCTIONS" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))') || ADDCONTEXT='""'
 echo "{\"continue\":true,\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":$ADDCONTEXT}}"
