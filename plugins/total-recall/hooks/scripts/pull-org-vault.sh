@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ORG_VAULT="$HOME/.total-recall/org"
-BRANCH="knowledge"
+BRANCH="org-vault"
 CONFIG_FILE="$HOME/.total-recall/config.json"
 ORG_REPO=$(python3 -c "import json,sys; print(json.load(open('$CONFIG_FILE')).get('orgRepo',''))" 2>/dev/null || echo "")
 if [ -z "$ORG_REPO" ]; then

@@ -7,10 +7,10 @@ const os = require('os');
 const { execSync, spawnSync } = require('child_process');
 
 const TOTAL_RECALL_DIR = path.join(os.homedir(), '.total-recall');
-const PERSONAL_VAULT = path.join(TOTAL_RECALL_DIR, 'personal');
+const PERSONAL_VAULT = path.join(TOTAL_RECALL_DIR, 'personal-vault');
 const ORG_VAULT_DIR = path.join(TOTAL_RECALL_DIR, 'org');
 const ORG_VAULT = path.join(ORG_VAULT_DIR, 'org-vault');
-const BRANCH = 'knowledge';
+const BRANCH = 'org-vault';
 
 function loadConfig() {
   try {
@@ -193,7 +193,7 @@ async function main() {
   const relIndex = path.relative(ORG_VAULT_DIR, path.join(ORG_VAULT, 'index.json'));
 
   // store_memory writes org memories DIRECTLY into the org-vault working tree (which
-  // lives on the `knowledge` branch after pull-org-vault.sh runs at session start). The
+  // lives on the `org-vault` branch after pull-org-vault.sh runs at session start). The
   // old code read from PERSONAL_VAULT here — where org files never live — so
   // existsSync was always false and every org sync silently exited 0 (a no-op). Sync
   // now commits the file that is already on disk, not a copy from personal.
@@ -202,15 +202,15 @@ async function main() {
     process.exit(0);
   }
 
-  // Keep the org-vault on the knowledge branch (its steady state). We deliberately do
+  // Keep the org-vault on the org-vault branch (its steady state). We deliberately do
   // NOT stash or restore the original branch: store_memory writes into this working
-  // tree, so staying on knowledge means the next store lands in the right place and
+  // tree, so staying on org-vault means the next store lands in the right place and
   // the next sync commits it directly. Stashing would remove the very file we commit.
   try {
     git(ORG_VAULT_DIR, ['checkout', BRANCH], { quiet: true });
   } catch (e) {
     // checkout can refuse if an untracked org file clashes with a tracked one on
-    // knowledge (rare, only if the working tree drifted off knowledge). Skip rather
+    // org-vault (rare, only if the working tree drifted off org-vault). Skip rather
     // than risk pushing from the wrong branch.
     console.error(`Cannot switch org vault to '${BRANCH}': ${e.message}`);
     return;

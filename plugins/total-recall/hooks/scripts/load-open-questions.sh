@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PERSONAL_VAULT="$HOME/.total-recall/personal"
+PERSONAL_VAULT="$HOME/.total-recall/personal-vault"
 OQ_FILE=$(find "$PERSONAL_VAULT" \( -name "*open*question*" -o -name "*ambient*curiosity*" \) 2>/dev/null | head -1)
 
 if [ -z "$OQ_FILE" ] || [ ! -f "$OQ_FILE" ]; then

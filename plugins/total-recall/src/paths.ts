@@ -5,7 +5,7 @@ import * as path from 'path';
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
 export const HOME = os.homedir();
-export const PERSONAL_VAULT = path.join(HOME, '.total-recall', 'personal');
+export const PERSONAL_VAULT = path.join(HOME, '.total-recall', 'personal-vault');
 export const ORG_VAULT = path.join(HOME, '.total-recall', 'org', 'org-vault');
 export const VECTORS_DB = path.join(PERSONAL_VAULT, 'vectors.db');
 export const INDEX_PATH = path.join(HOME, '.total-recall', 'index.json');

@@ -2,7 +2,7 @@
 # Single-pass awk scanner across both vaults. Reads only frontmatter.
 set -euo pipefail
 
-PERSONAL_VAULT="$HOME/.total-recall/personal"
+PERSONAL_VAULT="$HOME/.total-recall/personal-vault"
 ORG_VAULT="$HOME/.total-recall/org/org-vault"
 CACHE="$HOME/.total-recall/.index-cache.txt"
 

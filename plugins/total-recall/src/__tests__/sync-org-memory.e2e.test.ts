@@ -53,7 +53,7 @@ function runCjs(key: string, extra: string[] = []): { stdout: string; stderr: st
 }
 
 function remoteTree(): string[] {
-  return git(['ls-tree', '-r', '--name-only', 'knowledge'], { cwd: remote }).split('\n').filter(Boolean);
+  return git(['ls-tree', '-r', '--name-only', 'org-vault'], { cwd: remote }).split('\n').filter(Boolean);
 }
 
 function writeOrgMemory(relKey: string, fm: Record<string, unknown>, body: string) {
@@ -73,18 +73,18 @@ suite('sync-org-memory.cjs end-to-end (#1: org sync actually commits+pushes)', (
     orgDir = path.join(tmpHome, '.total-recall', 'org');
     orgVault = path.join(orgDir, 'org-vault');
 
-    // Bare remote whose default branch is knowledge.
+    // Bare remote whose default branch is org-vault.
     git(['init', '--bare', remote]);
-    git(['symbolic-ref', 'HEAD', 'refs/heads/knowledge'], { cwd: remote });
+    git(['symbolic-ref', 'HEAD', 'refs/heads/org-vault'], { cwd: remote });
 
-    // Local org-vault repo on knowledge with an initial commit, pointing at the remote
+    // Local org-vault repo on org-vault with an initial commit, pointing at the remote
     // so the script's `git pull --ff-only` / `git push` have somewhere to go.
     fs.mkdirSync(orgDir, { recursive: true });
     git(['init', orgDir]);
-    git(['symbolic-ref', 'HEAD', 'refs/heads/knowledge'], { cwd: orgDir });
+    git(['symbolic-ref', 'HEAD', 'refs/heads/org-vault'], { cwd: orgDir });
     git(['remote', 'add', 'origin', remote], { cwd: orgDir });
     git(['commit', '--allow-empty', '-m', 'init'], { cwd: orgDir });
-    git(['push', '-u', 'origin', 'knowledge'], { cwd: orgDir });
+    git(['push', '-u', 'origin', 'org-vault'], { cwd: orgDir });
 
     // config.json points orgRepo at the bare remote (no allowedEmailDomains → fail-closed).
     writeMkdir(path.join(tmpHome, '.total-recall', 'config.json'), JSON.stringify({ orgRepo: remote }));

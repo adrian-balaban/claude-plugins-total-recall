@@ -4,7 +4,7 @@
 // PreCompact helper: writes extracted learnings directly to the personal vault as
 // frontmatter .md files. Reads one JSON object per line on stdin (fields: title,
 // content, tags, category, importanceScore) and writes each to
-// ~/.total-recall/personal/<category>/<slug>.md.
+// ~/.total-recall/personal-vault/<category>/<slug>.md.
 //
 // This replaces the old `claude -p ... --mcp` storage path (the --mcp flag does not
 // exist, so storage was a silent no-op). Direct writes avoid any nested Claude
@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const VAULT = path.join(os.homedir(), '.total-recall', 'personal');
+const VAULT = path.join(os.homedir(), '.total-recall', 'personal-vault');
 
 function slugify(s) {
   return String(s || 'untitled')

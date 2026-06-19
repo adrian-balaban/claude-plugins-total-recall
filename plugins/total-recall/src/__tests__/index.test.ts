@@ -45,7 +45,7 @@ vi.mock('../vectorStore.js', () => ({
 
 function mkVaultDirs() {
   for (const cat of ['knowledge', 'architecture', 'decisions', 'meetings', 'troubleshooting', 'journal']) {
-    fs.mkdirSync(path.join(VAULT, 'personal', cat), { recursive: true });
+    fs.mkdirSync(path.join(VAULT, 'personal-vault', cat), { recursive: true });
   }
   fs.mkdirSync(path.join(VAULT, 'org', 'org-vault'), { recursive: true });
 }
@@ -131,7 +131,7 @@ describe('store_memory', () => {
   it('appends to journal for personal memories', async () => {
     await callTool('store_memory', { title: 'Journal Trigger', content: 'X', tags: [], category: 'knowledge' });
     const today = new Date().toISOString().slice(0, 10);
-    const jPath = path.join(VAULT, 'personal', 'journal', `${today}.md`);
+    const jPath = path.join(VAULT, 'personal-vault', 'journal', `${today}.md`);
     expect(fs.existsSync(jPath)).toBe(true);
     expect(fs.readFileSync(jPath, 'utf8')).toContain('Journal Trigger');
   });
@@ -358,7 +358,7 @@ describe('get_memories_by_keys', () => {
   });
 
   it('summary=true falls back to content.slice(500) when no Executive Summary heading', async () => {
-    const dir = path.join(VAULT, 'personal', 'knowledge');
+    const dir = path.join(VAULT, 'personal-vault', 'knowledge');
     const now = new Date().toISOString();
     fs.writeFileSync(
       path.join(dir, 'no-exec-summary.md'),
@@ -536,7 +536,7 @@ describe('prune_memories', () => {
 
 describe('rebuild_index', () => {
   it('picks up files written directly to vault', async () => {
-    const dir = path.join(VAULT, 'personal', 'knowledge');
+    const dir = path.join(VAULT, 'personal-vault', 'knowledge');
     fs.writeFileSync(
       path.join(dir, 'direct.md'),
       `---\ntitle: "Direct File"\ntags: [direct]\ncreated: ${new Date().toISOString()}\nupdated: ${new Date().toISOString()}\nimportanceScore: 0.5\n---\n\nDirect.\n`
@@ -659,7 +659,7 @@ describe('org vault scan', () => {
   it('personal vault takes precedence over org vault for same key', async () => {
     // Write same slug to both personal and org
     const slug = 'precedence-test';
-    const personalDir = path.join(VAULT, 'personal', 'knowledge');
+    const personalDir = path.join(VAULT, 'personal-vault', 'knowledge');
     const orgDir = path.join(VAULT, 'org', 'org-vault', 'knowledge');
     fs.mkdirSync(orgDir, { recursive: true });
     const now = new Date().toISOString();
@@ -719,7 +719,7 @@ describe('debounced timer callbacks — buildIndexCache and scheduleIdfRecalc', 
 
 describe('recall_memory full=true — cache miss reads from disk', () => {
   it('returns file content when key was indexed but never cached', async () => {
-    const dir = path.join(VAULT, 'personal', 'knowledge');
+    const dir = path.join(VAULT, 'personal-vault', 'knowledge');
     const now = new Date().toISOString();
     fs.writeFileSync(
       path.join(dir, 'disk-only.md'),
@@ -735,7 +735,7 @@ describe('recall_memory full=true — cache miss reads from disk', () => {
 
 describe('indexFile error handling — corrupt .md triggers catch', () => {
   it('logs error and continues when file is unreadable', async () => {
-    const dir = path.join(VAULT, 'personal', 'knowledge');
+    const dir = path.join(VAULT, 'personal-vault', 'knowledge');
     const badFile = path.join(dir, 'corrupt.md');
     // Write a file then make it unreadable
     fs.writeFileSync(badFile, 'not frontmatter at all\n');
@@ -784,7 +784,7 @@ describe('get_related_memories — sort comparator and zero-score filter', () =>
 describe('excluded directories', () => {
   it('does not index files from excluded dirs (.obsidian, projects, templates)', async () => {
     for (const excl of ['projects', 'templates', '.obsidian']) {
-      const dir = path.join(VAULT, 'personal', excl);
+      const dir = path.join(VAULT, 'personal-vault', excl);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(
         path.join(dir, 'hidden.md'),
@@ -891,7 +891,7 @@ describe('search_index — journal entries excluded by default', () => {
   it('does not return journal memories even when they contain matching keywords', async () => {
     // Write a journal file directly so search_index can't accidentally surface it
     const today = new Date().toISOString().slice(0, 10);
-    const journalDir = path.join(VAULT, 'personal', 'journal');
+    const journalDir = path.join(VAULT, 'personal-vault', 'journal');
     fs.mkdirSync(journalDir, { recursive: true });
     const now = new Date().toISOString();
     fs.writeFileSync(
@@ -909,7 +909,7 @@ describe('search_index — journal entries excluded by default', () => {
 
 describe('reconcileIndex — handles unreadable directory gracefully', () => {
   it('rebuild_index does not throw when a subdir is unreadable', async () => {
-    const badDir = path.join(VAULT, 'personal', 'troubleshooting');
+    const badDir = path.join(VAULT, 'personal-vault', 'troubleshooting');
     fs.mkdirSync(badDir, { recursive: true });
     fs.chmodSync(badDir, 0o000);
     await expect(callTool('rebuild_index')).resolves.not.toThrow();

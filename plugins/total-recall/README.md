@@ -12,10 +12,10 @@ Two separate vaults live under `~/.total-recall/`:
 
 | Vault | Path | When used |
 |---|---|---|
-| Personal | `~/.total-recall/personal/` | Default for all memories |
+| Personal | `~/.total-recall/personal-vault/` | Default for all memories |
 | Org | `~/.total-recall/org/org-vault/` | When tagged `org` |
 
-The org vault syncs to a remote git repo (`orgRepo` in `~/.total-recall/config.json`, branch `knowledge`) via a privacy filter that blocks secret tokens, email addresses, personal pronouns (in the title only), and phone numbers before any push.
+The org vault syncs to a remote git repo (`orgRepo` in `~/.total-recall/config.json`, branch `org-vault`) via a privacy filter that blocks secret tokens, email addresses, personal pronouns (in the title only), and phone numbers before any push.
 
 ### The 12 MCP Tools
 
@@ -121,12 +121,12 @@ Installed as a Claude Code **plugin** (recommended), `hooks/hooks.json` and `.mc
 
 | Location | Purpose |
 |---|---|
-| `~/.total-recall/personal/` | Personal memory vault |
+| `~/.total-recall/personal-vault/` | Personal memory vault |
 | `~/.total-recall/org/org-vault/` | Shared org vault (git-synced) |
 | `~/.total-recall/index.json` | In-memory index (persisted) |
 | `~/.total-recall/invertedIndex.json` | TF-IDF inverted index |
 | `~/.total-recall/.index-cache.txt` | Shell-readable cache injected at SessionStart |
-| `~/.total-recall/personal/vectors.db` | sqlite-vec vector store (optional) |
+| `~/.total-recall/personal-vault/vectors.db` | sqlite-vec vector store (optional) |
 | `~/.total-recall/config.json` | Plugin configuration — `orgRepo`, `allowedEmailDomains` (optional) |
 
 ## Org Vault

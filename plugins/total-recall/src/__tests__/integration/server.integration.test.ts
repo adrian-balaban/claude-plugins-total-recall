@@ -42,7 +42,7 @@ beforeAll(async () => {
       `dist/index.js not found at ${DIST}. Run "npm run build" before the integration suite.`,
     );
   }
-  fs.mkdirSync(path.join(VAULT, 'personal', 'knowledge'), { recursive: true });
+  fs.mkdirSync(path.join(VAULT, 'personal-vault', 'knowledge'), { recursive: true });
   fs.mkdirSync(path.join(VAULT, 'org', 'org-vault'), { recursive: true });
 
   // StdioClientParameters.env is Record<string, string>; strip undefined values.

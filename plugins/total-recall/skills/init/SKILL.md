@@ -22,11 +22,11 @@ If `PLUGIN_ROOT` is still empty, ask the user: "What is the path to the total-re
 ## Step 2 — Create vault directories
 
 ```bash
-mkdir -p ~/.total-recall/personal/{architecture,decisions,troubleshooting,meetings,knowledge,journal}
+mkdir -p ~/.total-recall/personal-vault/{architecture,decisions,troubleshooting,meetings,knowledge,journal}
 mkdir -p ~/.total-recall/org
 ```
 
-If `~/.total-recall/personal` already exists and is non-empty, skip and say "Vault directories already exist."
+If `~/.total-recall/personal-vault` already exists and is non-empty, skip and say "Vault directories already exist."
 
 ## Step 3 — Register MCP server
 
@@ -55,7 +55,7 @@ Ask: "Do you want to enable the shared org vault for syncing `org`-tagged memori
 
 If **yes**:
 1. Ask: "GitHub repo URL for the org vault?" (full HTTPS URL ending in `.git`)
-2. Ask: "Branch name?" (default: `knowledge`) — remind the user this branch must already exist with at least one commit
+2. Ask: "Branch name?" (default: `org-vault`) — remind the user this branch must already exist with at least one commit
 3. (Optional) Ask: "Any work email domain to allow in org-vault sync? The privacy filter blocks ALL emails by default. Leave blank to keep the safe default." If they give one (e.g. `yourcompany.com`), include `allowedEmailDomains`.
 4. Write config:
 ```bash

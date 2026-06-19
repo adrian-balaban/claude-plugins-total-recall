@@ -41,8 +41,8 @@ This is an MCP server that exposes 12 tools for persistent memory management. It
 3. Writes are debounced: `scheduleSave()` waits 1s → writes index → triggers `scheduleIdfRecalc()` at +2s → rebuilds TF-IDF inverted index → writes `.index-cache.txt`.
 
 **Dual vault routing:**
-- Personal vault: `~/.total-recall/personal/` — default for all memories
-- Org vault: `~/.total-recall/org/org-vault/` — used when tag `org` is present; synced to the repo configured via `orgRepo` in `~/.total-recall/config.json` (branch `knowledge`) via `scripts/sync-org-memory.cjs`
+- Personal vault: `~/.total-recall/personal-vault/` — default for all memories
+- Org vault: `~/.total-recall/org/org-vault/` — used when tag `org` is present; synced to the repo configured via `orgRepo` in `~/.total-recall/config.json` (branch `org-vault`) via `scripts/sync-org-memory.cjs`
 - Keys are relative paths from vault root; org keys are prefixed `org/`
 - Org sync runs a privacy filter: blocks secret tokens, all email addresses (fail-closed by default; allow your company domain via `allowedEmailDomains` in `~/.total-recall/config.json`), personal pronouns, and phone numbers before any push
 

@@ -11,9 +11,9 @@ For first-run onboarding — vault directories, MCP server registration, initial
 
 ## What is configurable — and what isn't
 
-The vault location is **fixed** at `~/.total-recall` (`personal/` and `org/org-vault/`). The optional config file is `~/.total-recall/config.json`. What you *can* configure:
+The vault location is **fixed** at `~/.total-recall` (`personal-vault/` and `org/org-vault/`). The optional config file is `~/.total-recall/config.json`. What you *can* configure:
 
-- Whether the **shared org vault** is enabled (cloned from a GitHub repo, branch `knowledge`)
+- Whether the **shared org vault** is enabled (cloned from a GitHub repo, branch `org-vault`)
   - Set `orgRepo` in `~/.total-recall/config.json` to point at your repo: `{ "orgRepo": "https://github.com/you/your-vault.git" }`
   - The org-vault privacy filter blocks all emails by default (fail-closed). If your team legitimately syncs work contacts, allow your company domain via `allowedEmailDomains`: `{ "orgRepo": "...", "allowedEmailDomains": ["yourcompany.com"] }`. Emails at any other domain are still blocked before push.
 - **MCP server** registration
@@ -73,7 +73,7 @@ Existing `~/.total-recall` vaults are fully compatible. Run `rebuild_index` to r
 ## Known Gotchas
 
 - **`node` not on PATH**: `claude mcp add-json` must use the full path to the node binary (e.g. `~/.nvm/versions/node/v24.15.0/bin/node`), otherwise MCP server shows "Failed to connect"
-- **`knowledge` branch must pre-exist**: `pull-org-vault.sh` clones the branch but won't create it. Initialize with at least one commit on the branch before first session start
+- **`org-vault` branch must pre-exist**: `pull-org-vault.sh` clones the branch but won't create it. Initialize with at least one commit on the branch before first session start
 - **YAML array format**: Memory tags must be in inline array format `[tag1, tag2]` on a single line — multi-line YAML sequences are not supported by the sync script's lightweight parser
 - **Org tag**: tag memories with `org` to route to the shared org vault and trigger sync
 - **Hook output format**: All hooks must output valid JSON `{"continue":true,...}` — any non-JSON output or non-zero exit causes the hook to fail silently (by design, to not block sessions). `sync-org-memory.cjs` logs its errors to `~/.total-recall/org/.sync-errors.log` so failures are still discoverable
