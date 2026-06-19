@@ -2984,7 +2984,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve2.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
         const { schemaId } = this.opts;
@@ -3011,7 +3011,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve2(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3642,7 +3642,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options) {
+    function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
       schemelessOptions.skipEscape = true;
@@ -3900,7 +3900,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve,
+      resolve: resolve2,
       resolveComponent,
       equal,
       serialize,
@@ -14210,7 +14210,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -14227,7 +14227,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -14305,7 +14305,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve2(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -14566,12 +14566,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve2, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -15441,12 +15441,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve();
+        resolve2();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve2);
       }
     });
   }
@@ -15543,7 +15543,7 @@ function tfidfSearch(query, excludeJournal = true) {
       const meta2 = memIndex[key];
       if (!meta2) continue;
       if (excludeJournal && meta2.category === "journal") continue;
-      const tf = tokenize(`${meta2.title} ${meta2.contentPreview}`).filter((t) => t === token).length;
+      const tf = tokenize(`${meta2.title} ${meta2.tags.join(" ")} ${meta2.contentPreview}`).filter((t) => t === token).length;
       let score = tf * entry.idf;
       if (meta2.title.toLowerCase().includes(token)) score *= 2;
       if (meta2.tags.some((t) => t.toLowerCase().includes(token))) score *= 1.5;
@@ -15561,6 +15561,12 @@ function tfidfSearch(query, excludeJournal = true) {
 // src/persistence.ts
 var indexSaveTimer = null;
 var idfTimer = null;
+function atomicWrite(p, data) {
+  ensureDir(path2.dirname(p));
+  const tmp = `${p}.tmp`;
+  fs2.writeFileSync(tmp, data);
+  fs2.renameSync(tmp, p);
+}
 function loadIndex(target, p) {
   for (const k of Object.keys(target)) delete target[k];
   try {
@@ -15575,8 +15581,7 @@ function loadIndexes() {
 function scheduleSave() {
   if (indexSaveTimer) clearTimeout(indexSaveTimer);
   indexSaveTimer = setTimeout(() => {
-    ensureDir(path2.dirname(INDEX_PATH));
-    fs2.writeFileSync(INDEX_PATH, JSON.stringify(memIndex, null, 2));
+    atomicWrite(INDEX_PATH, JSON.stringify(memIndex, null, 2));
     scheduleIdfRecalc();
   }, 1e3);
 }
@@ -15584,17 +15589,16 @@ function scheduleIdfRecalc() {
   if (idfTimer) clearTimeout(idfTimer);
   idfTimer = setTimeout(() => {
     rebuildInvertedIndex();
-    fs2.writeFileSync(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
+    atomicWrite(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
     buildIndexCache();
   }, 2e3);
 }
 function saveNow() {
-  ensureDir(path2.dirname(INDEX_PATH));
-  fs2.writeFileSync(INDEX_PATH, JSON.stringify(memIndex, null, 2));
+  atomicWrite(INDEX_PATH, JSON.stringify(memIndex, null, 2));
 }
 function recalcIdfNow() {
   rebuildInvertedIndex();
-  fs2.writeFileSync(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
+  atomicWrite(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
   buildIndexCache();
 }
 function flushPending() {
@@ -15615,7 +15619,7 @@ function buildIndexCache() {
     lines.push(`- ${m.key}: ${shortTitle} [${tags}] (${m.category})`);
   }
   ensureDir(path2.dirname(INDEX_CACHE_PATH));
-  fs2.writeFileSync(INDEX_CACHE_PATH, lines.join("\n"));
+  atomicWrite(INDEX_CACHE_PATH, lines.join("\n"));
 }
 
 // src/vault-scan.ts
@@ -15730,9 +15734,11 @@ function serializeValue(v) {
   return serializeString(String(v));
 }
 function serializeArrayItem(s) {
+  if (/[\r\n]/.test(s)) throw new Error("Frontmatter array item contains a newline \u2014 refusing to emit.");
   return needsQuotes(s) ? `'${s.replace(/'/g, "''")}'` : s;
 }
 function serializeString(s) {
+  if (/[\r\n]/.test(s)) throw new Error("Frontmatter value contains a newline \u2014 refusing to emit.");
   return needsQuotes(s) ? `'${s.replace(/'/g, "''")}'` : s;
 }
 function needsQuotes(s) {
@@ -15849,7 +15855,9 @@ var LRUCache = class {
     return entry.value;
   }
   set(key, value) {
-    if (this.map.size >= this.maxSize) {
+    if (this.map.has(key)) {
+      this.map.delete(key);
+    } else if (this.map.size >= this.maxSize) {
       this.map.delete(this.map.keys().next().value);
     }
     this.map.set(key, { value, expiry: Date.now() + this.ttlMs });
@@ -15964,12 +15972,18 @@ function storeMemory(args) {
   ensureDir(catDir);
   const filePath = path5.join(catDir, `${slug}.md`);
   const key = keyFromPath(filePath, isOrg);
-  const effectiveAuthor = author ?? os2.userInfo().username;
+  const vaultRoot = path5.resolve(isOrg ? ORG_VAULT : PERSONAL_VAULT);
+  const resolved = path5.resolve(filePath);
+  if (resolved !== vaultRoot && !resolved.startsWith(vaultRoot + path5.sep)) {
+    throw new Error(`Invalid category "${category}": resolves outside the vault.`);
+  }
+  const osUser = os2.userInfo().username;
+  const effectiveAuthor = isOrg ? osUser : author ?? osUser;
   let preservedCreated;
   if (fs5.existsSync(filePath)) {
     const existingFm = parseFrontmatter(fs5.readFileSync(filePath, "utf8")).data;
-    if (isOrg && existingFm.author && existingFm.author !== effectiveAuthor) {
-      throw new Error(`Cannot overwrite org memory authored by ${existingFm.author}.`);
+    if (isOrg && existingFm.author !== effectiveAuthor) {
+      throw new Error(`Cannot overwrite org memory authored by ${existingFm.author ?? "(unknown)"}.`);
     }
     if (!force) {
       throw new Error(
@@ -16064,6 +16078,9 @@ async function recallMemory(args) {
     }
   } else {
     ranked = tfidfResults;
+  }
+  if (excludeJournal) {
+    ranked = ranked.filter((r) => memIndex[r.key]?.category !== "journal");
   }
   if (since) {
     const cutoff = parseRelativeDate(since) ?? new Date(since);
@@ -16223,8 +16240,12 @@ function updateMemory(args) {
   const sessions = [.../* @__PURE__ */ new Set([...prevSessions, ...sessionId ? [sessionId] : []])].slice(-50);
   const newFm = {
     ...parsed.data,
-    tags: tags ?? parsed.data.tags,
-    importanceScore: importanceScore ?? parsed.data.importanceScore,
+    // Coerce to defaults (matching indexFile) so an update that omits the arg
+    // against a file that never had the field can't leave tags/importanceScore as
+    // `undefined` in memIndex — that would crash tfidfSearch/list filters (~3s
+    // later via the debounced rebuildInvertedIndex) on meta.tags.join/.includes.
+    tags: tags ?? parsed.data.tags ?? [],
+    importanceScore: importanceScore ?? parsed.data.importanceScore ?? 0.5,
     updated: now,
     sessions
   };

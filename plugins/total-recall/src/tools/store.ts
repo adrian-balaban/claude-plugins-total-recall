@@ -27,14 +27,29 @@ export function storeMemory(args: any): any {
   ensureDir(catDir);
   const filePath = path.join(catDir, `${slug}.md`);
   const key = keyFromPath(filePath, isOrg);
-  const effectiveAuthor = author ?? os.userInfo().username;
+  // Path-containment guard: `category` is caller-supplied, so a value like
+  // "../.." resolves outside the vault and would write an arbitrary file. Resolve
+  // and confirm the final path stays inside the chosen vault before touching it.
+  const vaultRoot = path.resolve(isOrg ? ORG_VAULT : PERSONAL_VAULT);
+  const resolved = path.resolve(filePath);
+  if (resolved !== vaultRoot && !resolved.startsWith(vaultRoot + path.sep)) {
+    throw new Error(`Invalid category "${category}": resolves outside the vault.`);
+  }
+  // Org memories are always attributed to the real OS user — never trust a
+  // caller-supplied `author` for org, or any caller could pass the existing
+  // author's name and bypass the org-author guard below. Personal memories may
+  // still carry an explicit author for attribution.
+  const osUser = os.userInfo().username;
+  const effectiveAuthor = isOrg ? osUser : (author ?? osUser);
 
   let preservedCreated: string | undefined;
   if (fs.existsSync(filePath)) {
     const existingFm = parseFrontmatter(fs.readFileSync(filePath, 'utf8')).data as Partial<MemoryFrontmatter>;
-    // Org memories are author-protected regardless of force.
-    if (isOrg && existingFm.author && existingFm.author !== effectiveAuthor) {
-      throw new Error(`Cannot overwrite org memory authored by ${existingFm.author}.`);
+    // Org memories are author-protected regardless of force. Compare against the
+    // real OS user; a missing author on an existing org memory is treated as
+    // foreign (fail-closed) rather than silently overwritable.
+    if (isOrg && existingFm.author !== effectiveAuthor) {
+      throw new Error(`Cannot overwrite org memory authored by ${existingFm.author ?? '(unknown)'}.`);
     }
     if (!force) {
       throw new Error(

@@ -119,6 +119,45 @@ describe('store_memory', () => {
     expect(res.content[0].text).toContain('other-user');
   });
 
+  it('rejects a category that escapes the vault (path traversal)', async () => {
+    const res = await callTool('store_memory', {
+      title: 'Escape', content: 'X', tags: [], category: '../../../tmp',
+    });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain('outside the vault');
+    // Nothing was written outside the vault.
+    expect(fs.existsSync(path.join(os.tmpdir(), 'escape.md'))).toBe(false);
+  });
+
+  it('ignores a caller-supplied author for org (no impersonation bypass)', async () => {
+    // An existing org memory authored by "other-user". A caller passing
+    // author: "other-user" + force must NOT be able to impersonate and overwrite.
+    const orgDir = path.join(VAULT, 'org', 'org-vault', 'architecture');
+    fs.mkdirSync(orgDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(orgDir, 'impersonate-org.md'),
+      `---\ntitle: "Impersonate Org"\nauthor: other-user\ntags: [org]\ncreated: 2026-01-01T00:00:00Z\nupdated: 2026-01-01T00:00:00Z\n---\nContent\n`
+    );
+    const res = await callTool('store_memory', {
+      title: 'Impersonate Org', content: 'Hijacked.', tags: ['org'],
+      category: 'architecture', author: 'other-user', force: true,
+    });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain('other-user');
+    // The original content is intact (not overwritten).
+    const raw = fs.readFileSync(path.join(orgDir, 'impersonate-org.md'), 'utf8');
+    expect(raw).toContain('Content\n');
+    expect(raw).not.toContain('Hijacked');
+  });
+
+  it('rejects a title containing a newline (frontmatter injection)', async () => {
+    const res = await callTool('store_memory', {
+      title: 'bad\ninjected: evil', content: 'X', tags: [],
+    });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain('newline');
+  });
+
   it('writes valid frontmatter with title and importanceScore', async () => {
     const res = result(await callTool('store_memory', {
       title: 'FM Check', content: 'Body.', tags: [], importanceScore: 0.8,

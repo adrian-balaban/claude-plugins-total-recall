@@ -4,9 +4,11 @@ set -euo pipefail
 ORG_VAULT="$HOME/.total-recall/org"
 BRANCH="org-vault"
 CONFIG_FILE="$HOME/.total-recall/config.json"
-ORG_REPO=$(python3 -c "import json,sys; print(json.load(open('$CONFIG_FILE')).get('orgRepo',''))" 2>/dev/null || echo "")
+# Read orgRepo from config.json via node (node is a hard dependency of this
+# plugin; python3 is not guaranteed). Falls back to '' on any error.
+ORG_REPO=$(node -e "try{process.stdout.write(String(JSON.parse(require('fs').readFileSync('$CONFIG_FILE','utf8')).orgRepo||''))}catch{}" 2>/dev/null || echo "")
 if [ -z "$ORG_REPO" ]; then
-  echo '{"continue":true,"hookSpecificOutput":{"additionalContext":"Org vault skipped: orgRepo not set in ~/.total-recall/config.json"}}'
+  echo '{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Org vault skipped: orgRepo not set in ~/.total-recall/config.json"}}'
   exit 0
 fi
 
@@ -21,21 +23,27 @@ mkdir -p "$ORG_VAULT"
 if [ ! -d "$ORG_VAULT/.git" ]; then
   if ! gh repo clone "$ORG_REPO" "$ORG_VAULT" -- --branch "$BRANCH" --depth 1 2>/dev/null; then
     if ! git clone --branch "$BRANCH" --depth 1 "$ORG_REPO" "$ORG_VAULT" 2>/dev/null; then
-      echo '{"continue":true,"hookSpecificOutput":{"additionalContext":"Failed to clone org vault."}}'
+      echo '{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Failed to clone org vault."}}'
       exit 0
     fi
   fi
-  echo '{"continue":true,"hookSpecificOutput":{"additionalContext":"Org vault cloned."}}'
+  echo '{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Org vault cloned."}}'
   exit 0
 fi
 
 cd "$ORG_VAULT"
 BEFORE=$(git rev-parse HEAD 2>/dev/null || echo "")
-git pull --ff-only origin "$BRANCH" 2>/dev/null || true
-AFTER=$(git rev-parse HEAD 2>/dev/null || echo "")
-
-if [ "$BEFORE" = "$AFTER" ]; then
-  echo '{"continue":true,"hookSpecificOutput":{"additionalContext":"Org vault up-to-date."}}'
+# Pull with a real success/failure branch. The old form `git pull ... || true`
+# swallowed pull failures and then reported "up-to-date" whenever BEFORE==AFTER —
+# so a network/auth error looked identical to "nothing new", silently leaving the
+# vault stale. Now a failed pull is reported as such (and the local copy is used).
+if git pull --ff-only origin "$BRANCH" 2>/dev/null; then
+  AFTER=$(git rev-parse HEAD 2>/dev/null || echo "")
+  if [ "$BEFORE" = "$AFTER" ]; then
+    echo '{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Org vault up-to-date."}}'
+  else
+    echo "{\"continue\":true,\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Org vault updated: $BEFORE -> $AFTER\"}}"
+  fi
 else
-  echo "{\"continue\":true,\"hookSpecificOutput\":{\"additionalContext\":\"Org vault updated: $BEFORE -> $AFTER\"}}"
+  echo '{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Org vault pull failed (network/auth) — using local copy."}}'
 fi

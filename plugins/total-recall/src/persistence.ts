@@ -15,6 +15,16 @@ let idfTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ─── Index persistence ───────────────────────────────────────────────────────
 
+// Write-then-rename so a SIGKILL / power loss mid-write can't leave index.json,
+// invertedIndex.json, or .index-cache.txt half-truncated (which would corrupt
+// the index and lose all metadata on the next boot). rename is atomic on POSIX.
+function atomicWrite(p: string, data: string) {
+  ensureDir(path.dirname(p));
+  const tmp = `${p}.tmp`;
+  fs.writeFileSync(tmp, data);
+  fs.renameSync(tmp, p);
+}
+
 function loadIndex<T extends Record<string, unknown>>(target: T, p: string) {
   // Clear-then-populate the shared singleton (formerly `target = JSON.parse(...)`).
   for (const k of Object.keys(target)) delete (target as any)[k];
@@ -29,8 +39,7 @@ export function loadIndexes() {
 export function scheduleSave() {
   if (indexSaveTimer) clearTimeout(indexSaveTimer);
   indexSaveTimer = setTimeout(() => {
-    ensureDir(path.dirname(INDEX_PATH));
-    fs.writeFileSync(INDEX_PATH, JSON.stringify(memIndex, null, 2));
+    atomicWrite(INDEX_PATH, JSON.stringify(memIndex, null, 2));
     scheduleIdfRecalc();
   }, 1000);
 }
@@ -39,7 +48,7 @@ export function scheduleIdfRecalc() {
   if (idfTimer) clearTimeout(idfTimer);
   idfTimer = setTimeout(() => {
     rebuildInvertedIndex();
-    fs.writeFileSync(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
+    atomicWrite(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
     buildIndexCache();
   }, 2000);
 }
@@ -51,13 +60,12 @@ export function scheduleIdfRecalc() {
 // are written synchronously and are always durable).
 
 export function saveNow() {
-  ensureDir(path.dirname(INDEX_PATH));
-  fs.writeFileSync(INDEX_PATH, JSON.stringify(memIndex, null, 2));
+  atomicWrite(INDEX_PATH, JSON.stringify(memIndex, null, 2));
 }
 
 export function recalcIdfNow() {
   rebuildInvertedIndex();
-  fs.writeFileSync(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
+  atomicWrite(INVERTED_INDEX_PATH, JSON.stringify(invertedIndex, null, 2));
   buildIndexCache();
 }
 
@@ -82,5 +90,5 @@ export function buildIndexCache() {
     lines.push(`- ${m.key}: ${shortTitle} [${tags}] (${m.category})`);
   }
   ensureDir(path.dirname(INDEX_CACHE_PATH));
-  fs.writeFileSync(INDEX_CACHE_PATH, lines.join('\n'));
+  atomicWrite(INDEX_CACHE_PATH, lines.join('\n'));
 }

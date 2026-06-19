@@ -62,7 +62,7 @@ This is an MCP server that exposes 12 tools for persistent memory management. It
 **Hooks** (`hooks/hooks.json`):
 - `SessionStart`: pull org vault → rebuild index cache → inject memory index → inject open questions
 - `PostToolUse` (store/update/delete): sync to org vault if tagged `org`
-- `PreCompact`: extract 0–3 learnings from transcript via `extract-and-store-memories.sh` (requires `CLAUDE_TRANSCRIPT_PATH` env var) → pipes JSON lines to `hooks/scripts/store-learning.cjs` which writes them directly as frontmatter `.md` files to the personal vault (no MCP round-trip; never overwrites existing files)
+- `PreCompact`: extract 0–3 learnings from transcript via `extract-and-store-memories.sh` (reads `transcript_path` from the hook's stdin JSON — Claude Code's common hook input, *not* an env var) → pipes JSON lines to `hooks/scripts/store-learning.cjs` which writes them directly as frontmatter `.md` files to the personal vault (no MCP round-trip; never overwrites existing files)
 
 ## Memory Workflow
 
@@ -90,3 +90,8 @@ Every stored memory must include a `## Executive Summary` section (answers WHY i
 - `sessions` history in `update_memory` — deduplicated, capped at the last 50 entries; not replaced wholesale
 - `contentCache` is an LRU (100 entries, 30-min TTL) — `recall_memory(full=true)` and `get_memories_by_keys` read through it; `update_memory` and `delete_memory` invalidate entries on write
 - Build externalizes `@huggingface/transformers`, `sqlite-vec`, `better-sqlite3`, and `fsevents` — these must remain optional
+- `category` is path-containment-checked — `store_memory` resolves `<vault>/<category>` and rejects values (e.g. `../../../tmp`) that escape the vault root; never trust `category` as a raw path
+- Org-author guard **ignores** the caller-supplied `author` for org memories — `effectiveAuthor` is always `os.userInfo().username` for org writes, so `author:'someone-else'` + `force:true` cannot overwrite another author's org memory
+- Frontmatter scalars reject embedded newlines — `frontmatter.ts` throws if a `title`/`tags` value contains `\r` or `\n`, preventing injection of a new frontmatter key from a scalar value
+- Index files (`index.json`, `invertedIndex.json`, `.index-cache.txt`) are written atomically via write-`.tmp` + `rename` — `persistence.ts` `atomicWrite()`; never write these files directly with a plain `writeFileSync`
+- SessionStart hooks emit `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":…}}` — omitting `hookEventName` silently drops the context (the plugin's core feature); JSON-encoding uses `node`, not `python3`

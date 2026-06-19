@@ -64,4 +64,4 @@ Before calling `store_memory`, verify:
 - `rebuild_index` now preserves `accessCount`/`lastAccessed` — safe to run anytime
 - Org vault `index.json` is updated on every sync — no manual rebuild needed
 - Vector search (`@huggingface/transformers`, `sqlite-vec`) is lazy-loaded; if packages missing, gracefully degrades to TF-IDF only
-- `extract-and-store-memories.sh` requires `CLAUDE_TRANSCRIPT_PATH` env var set by Claude Code at PreCompact — does nothing if var is absent
+- `extract-and-store-memories.sh` reads `transcript_path` from the PreCompact hook's stdin JSON (Claude Code's common hook input) — does nothing if the path is absent or the file is missing

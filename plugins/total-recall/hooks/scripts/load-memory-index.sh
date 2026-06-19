@@ -29,4 +29,9 @@ The following memories are already in context. Use keys with get_memories_by_key
 ### Memory Index
 $INDEX_CONTENT"
 
-echo "{\"continue\":true,\"hookSpecificOutput\":{\"additionalContext\":$(echo "$INSTRUCTIONS" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}}"
+# hookSpecificOutput REQUIRES hookEventName:"SessionStart" or additionalContext is
+# silently dropped (verified against the Claude Code hooks reference). Without it,
+# the injected memory index — the plugin's core feature — never reached Claude.
+# JSON-encode via node (node is this plugin's hard dependency; python3 is not).
+ADDCONTEXT=$(printf '%s' "$INSTRUCTIONS" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))')
+echo "{\"continue\":true,\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":$ADDCONTEXT}}"

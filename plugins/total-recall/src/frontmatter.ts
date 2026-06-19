@@ -155,10 +155,17 @@ function serializeValue(v: unknown): string {
 }
 
 function serializeArrayItem(s: string): string {
+  // A literal newline in an inline-array item would terminate the frontmatter
+  // line and inject a following line as a new key on re-parse. Single-quoted
+  // YAML scalars can't span lines either, so refuse rather than mis-emit.
+  if (/[\r\n]/.test(s)) throw new Error('Frontmatter array item contains a newline — refusing to emit.');
   return needsQuotes(s) ? `'${s.replace(/'/g, "''")}'` : s;
 }
 
 function serializeString(s: string): string {
+  // Same injection risk as array items: a newline in a scalar value would spill
+  // onto the next frontmatter line and be parsed as an extra key. Fail closed.
+  if (/[\r\n]/.test(s)) throw new Error('Frontmatter value contains a newline — refusing to emit.');
   return needsQuotes(s) ? `'${s.replace(/'/g, "''")}'` : s;
 }
 

@@ -20,7 +20,14 @@ export class LRUCache<K, V> {
   }
 
   set(key: K, value: V) {
-    if (this.map.size >= this.maxSize) {
+    // If the key already exists, refresh it in place (delete then re-insert at
+    // MRU) rather than evicting the LRU entry first — otherwise updating an
+    // existing key would evict an innocent entry AND fail to move the updated key
+    // to the most-recently-used position. Map insertion order === LRU order, so
+    // delete-then-set puts the key at the end (MRU).
+    if (this.map.has(key)) {
+      this.map.delete(key);
+    } else if (this.map.size >= this.maxSize) {
       this.map.delete(this.map.keys().next().value!);
     }
     this.map.set(key, { value, expiry: Date.now() + this.ttlMs });

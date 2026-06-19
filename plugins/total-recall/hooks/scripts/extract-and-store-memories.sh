@@ -8,7 +8,12 @@
 # explicit rebuild_index.
 set -euo pipefail
 
-TRANSCRIPT="${CLAUDE_TRANSCRIPT_PATH:-}"
+# Claude Code passes hook input as JSON on stdin; transcript_path is a common
+# field there (NOT a CLAUDE_TRANSCRIPT_PATH env var — that env var is never set,
+# so the previous version always exited here and PreCompact was a permanent
+# no-op that stored nothing). Read stdin once, parse transcript_path via node.
+HOOK_INPUT=$(cat)
+TRANSCRIPT=$(printf '%s' "$HOOK_INPUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).transcript_path||"")}catch{}})' 2>/dev/null || echo "")
 
 if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; then
   echo '{"continue":true}'

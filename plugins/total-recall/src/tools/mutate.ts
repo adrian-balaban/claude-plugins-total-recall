@@ -33,8 +33,12 @@ export function updateMemory(args: any): any {
 
   const newFm = {
     ...parsed.data,
-    tags: tags ?? parsed.data.tags,
-    importanceScore: importanceScore ?? parsed.data.importanceScore,
+    // Coerce to defaults (matching indexFile) so an update that omits the arg
+    // against a file that never had the field can't leave tags/importanceScore as
+    // `undefined` in memIndex — that would crash tfidfSearch/list filters (~3s
+    // later via the debounced rebuildInvertedIndex) on meta.tags.join/.includes.
+    tags: (tags ?? parsed.data.tags) ?? [],
+    importanceScore: (importanceScore ?? parsed.data.importanceScore) ?? 0.5,
     updated: now,
     sessions,
   };

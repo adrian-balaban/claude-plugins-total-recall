@@ -42,6 +42,16 @@ export async function recallMemory(args: any): Promise<any> {
     ranked = tfidfResults;
   }
 
+  // Hybrid fusion can surface journal entries via the vector ranking even when
+  // excludeJournal=true: tfidfSearch excluded them, but searchVector does not, so
+  // the fused list may contain journal keys. Re-apply the journal filter before
+  // date/limit narrowing so recall_memory(hybrid=true, excludeJournal=true) does
+  // not leak journal entries. (No-op for the TF-IDF-only and excludeJournal=false
+  // paths: the former is already filtered, the latter opts in to journal.)
+  if (excludeJournal) {
+    ranked = ranked.filter(r => memIndex[r.key]?.category !== 'journal');
+  }
+
   if (since) {
     const cutoff = parseRelativeDate(since) ?? new Date(since);
     ranked = ranked.filter(r => {

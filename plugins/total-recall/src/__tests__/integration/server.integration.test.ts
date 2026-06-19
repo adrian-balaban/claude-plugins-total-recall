@@ -56,7 +56,7 @@ beforeAll(async () => {
     command: 'node',
     args: [DIST],
     env,
-    stderr: 'pipe', // capture child stderr so a startup crash surfaces instead of vanishing
+    stderr: 'inherit', // startup crashes visible in test output; avoids pipe-buffer deadlock
   });
 
   client = new Client({ name: 'tr-integration-test', version: '0.0.1' }, {});

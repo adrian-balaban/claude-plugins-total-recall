@@ -19,7 +19,7 @@ The vault location is **fixed** at `~/.total-recall` (`personal-vault/` and `org
 
 ## Prerequisites
 
-- Node.js v16+ (per `package.json` `engines`)
+- Node.js v18+ (per `package.json` `engines`)
 - `gh` CLI authenticated (`gh auth status`) — required for org vault GitHub sync (token scopes: `repo` read + write)
 
 ---

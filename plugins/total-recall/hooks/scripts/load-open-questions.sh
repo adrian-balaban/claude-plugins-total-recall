@@ -17,4 +17,8 @@ if [ "$SIZE" -gt 3072 ]; then
 fi
 
 CONTENT=$(cat "$OQ_FILE")
-echo "{\"continue\":true,\"hookSpecificOutput\":{\"additionalContext\":$(echo "## Ambient Curiosity — Open Technical Questions\n\n$CONTENT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}}"
+# hookSpecificOutput REQUIRES hookEventName:"SessionStart" or additionalContext is
+# silently dropped (verified against the Claude Code hooks reference). JSON-encode
+# via node (node is this plugin's hard dependency; python3 is not guaranteed).
+ADDCONTEXT=$(printf '## Ambient Curiosity — Open Technical Questions\n\n%s' "$CONTENT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.stringify(s)))')
+echo "{\"continue\":true,\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":$ADDCONTEXT}}"

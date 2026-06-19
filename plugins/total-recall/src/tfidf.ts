@@ -46,7 +46,10 @@ export function tfidfSearch(query: string, excludeJournal = true): Array<{ key: 
       const meta = memIndex[key];
       if (!meta) continue;
       if (excludeJournal && meta.category === 'journal') continue;
-      const tf = tokenize(`${meta.title} ${meta.contentPreview}`).filter(t => t === token).length;
+      // Match rebuildInvertedIndex's tokenization (title + tags + contentPreview):
+      // without `tags` here, a tag-only match would score tf=0 at search time even
+      // though it was indexed, silently dropping otherwise-relevant memories.
+      const tf = tokenize(`${meta.title} ${meta.tags.join(' ')} ${meta.contentPreview}`).filter(t => t === token).length;
       let score = tf * entry.idf;
       if (meta.title.toLowerCase().includes(token)) score *= 2;
       if (meta.tags.some(t => t.toLowerCase().includes(token))) score *= 1.5;

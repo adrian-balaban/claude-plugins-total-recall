@@ -86,8 +86,10 @@ const US_PHONE_RE = /(?:\+\d{1,3}[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
 // International: +country code then 7-13 more digits with separators (E.164-ish, max 15 total)
 const INTL_PHONE_RE = /\+\d{1,3}[\s().-]*(?:\d[\s().-]*){6,12}\d/;
 const PHONE_RE = new RegExp(`(?:${INTL_PHONE_RE.source}|${US_PHONE_RE.source})`);
-// Common API keys / tokens — leaked credentials are the highest-risk PII for a public repo
-const SECRET_TOKEN_RE = /\b(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[opsu]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35})\b/;
+// Common API keys / tokens — leaked credentials are the highest-risk PII for a public repo.
+// PEM private-key headers are matched separately (they contain no word boundary).
+// Added: GitLab PAT (glpat-), GitHub xApp token (xapp-), JWTs (eyJ…), and PEM keys.
+const SECRET_TOKEN_RE = /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----|\b(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[opsu]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|glpat-[A-Za-z0-9_-]{20}|xapp-[A-Za-z0-9_-]{36,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})\b/;
 
 function matterParse(raw) {
   const match = raw.match(/^---\n([\s\S]*?)\n---/);
@@ -144,7 +146,11 @@ function matterParse(raw) {
 }
 
 function privacyCheck(data, content) {
-  const text = `${data.title ?? ''} ${content}`;
+  // Scan the union of title, author, tags, and body. Previously only title+body
+  // were scanned, so a secret or personal email smuggled into the `tags` array or
+  // the `author` field would sail past the filter into the shared org repo.
+  const tagText = Array.isArray(data.tags) ? data.tags.join(' ') : '';
+  const text = `${data.title ?? ''} ${data.author ?? ''} ${tagText} ${content}`;
   if (SECRET_TOKEN_RE.test(text)) return 'secret token or API key detected';
   if (findSuspiciousEmail(text, ALLOWED_DOMAINS)) return 'suspicious email address detected';
   if (PERSONAL_PRONOUN_RE.test(data.title ?? '')) {

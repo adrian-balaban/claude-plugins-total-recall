@@ -63,6 +63,14 @@ process.stdin.on('end', () => {
     try { obj = JSON.parse(trimmed); } catch { errors++; continue; }
     if (!obj || !obj.title || !obj.content) { errors++; continue; }
 
+    // A newline in a frontmatter scalar (title/tag) would spill onto the next
+    // line and inject a spurious key on re-parse. Skip malformed/malicious lines
+    // rather than risk frontmatter injection into the personal vault.
+    if (/[\r\n]/.test(obj.title) ||
+        (Array.isArray(obj.tags) && obj.tags.some(t => /[\r\n]/.test(String(t))))) {
+      errors++; continue;
+    }
+
     const category = obj.category && /^[a-z0-9_-]+$/i.test(obj.category) ? obj.category : 'knowledge';
     const dir = path.join(VAULT, category);
     try { fs.mkdirSync(dir, { recursive: true }); } catch { errors++; continue; }
