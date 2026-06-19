@@ -1,0 +1,176 @@
+/**
+ * Integration tests — the "real process over real transport" layer.
+ *
+ * Unlike src/__tests__/index.test.ts (which mocks the MCP SDK transport and
+ * calls the tool handlers in-process), these tests spawn the *built*
+ * dist/index.js as a child process and talk to it over stdio using the real
+ * MCP client. This verifies the JSON-RPC wire format, process startup, and
+ * the full stack end-to-end.
+ *
+ * Requires a prior `npm run build` (dist/index.js must exist). Run via
+ * `npm run test:integration`, which builds first.
+ */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
+
+const DIST = path.resolve(__dirname, '../../../dist/index.js');
+const TEST_HOME = path.join(os.tmpdir(), `tr-integration-${process.pid}-${Date.now()}`);
+const VAULT = path.join(TEST_HOME, '.total-recall');
+
+let client: Client;
+let transport: StdioClientTransport;
+let childPid: number | undefined;
+
+function text(res: { content: Array<{ type: string; text?: string }> }) {
+  return res.content.map((c) => c.text ?? '').join('');
+}
+
+function json(res: { content: Array<{ type: string; text?: string }> }) {
+  return JSON.parse(text(res));
+}
+
+beforeAll(async () => {
+  // Sanity: the build must have produced dist/index.js.
+  if (!fs.existsSync(DIST)) {
+    throw new Error(
+      `dist/index.js not found at ${DIST}. Run "npm run build" before the integration suite.`,
+    );
+  }
+  fs.mkdirSync(path.join(VAULT, 'personal', 'knowledge'), { recursive: true });
+  fs.mkdirSync(path.join(VAULT, 'org', 'org-vault'), { recursive: true });
+
+  // StdioClientParameters.env is Record<string, string>; strip undefined values.
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === 'string') env[k] = v;
+  }
+  env.HOME = TEST_HOME;
+
+  transport = new StdioClientTransport({
+    command: 'node',
+    args: [DIST],
+    env,
+    stderr: 'pipe', // capture child stderr so a startup crash surfaces instead of vanishing
+  });
+
+  client = new Client({ name: 'tr-integration-test', version: '0.0.1' }, {});
+  await client.connect(transport);
+  childPid = transport.pid ?? undefined;
+}, 30_000);
+
+afterAll(async () => {
+  try {
+    await client?.close();
+  } catch {
+    /* ignore — process may already be gone */
+  }
+  if (childPid) {
+    try {
+      process.kill(childPid, 'SIGKILL');
+    } catch {
+      /* already dead */
+    }
+  }
+  fs.rmSync(TEST_HOME, { recursive: true, force: true });
+}, 30_000);
+
+describe('total-recall over real stdio', () => {
+  it('exposes the 12 documented tools via list_tools', async () => {
+    const { tools } = await client.listTools();
+    expect(tools.map((t: any) => t.name).sort()).toEqual([
+      'delete_memory', 'get_memories_by_keys', 'get_related_memories',
+      'get_stats', 'get_timeline', 'list_memories', 'prune_memories',
+      'rebuild_index', 'recall_memory', 'search_index', 'store_memory', 'update_memory',
+    ]);
+  });
+
+  it('stores a memory and recalls it back', async () => {
+    const stored = json(
+      await client.callTool({
+        name: 'store_memory',
+        arguments: {
+          title: 'Integration Alpha',
+          content: 'Round-tripped over real stdio transport.',
+          tags: ['integration', 'test'],
+          category: 'knowledge',
+        },
+      }),
+    );
+    expect(stored.key).toMatch(/^knowledge\//);
+    expect(fs.existsSync(stored.filePath)).toBe(true);
+
+    const recalled = json(
+      await client.callTool({
+        name: 'recall_memory',
+        arguments: { query: 'round-tripped stdio' },
+      }),
+    );
+    expect(recalled.memories.length).toBeGreaterThan(0);
+    expect(recalled.memories[0].key).toBe(stored.key);
+  });
+
+  it('routes an org-tagged memory to the org vault path', async () => {
+    const stored = json(
+      await client.callTool({
+        name: 'store_memory',
+        arguments: {
+          title: 'Org Decision',
+          content: 'Team-wide decision via integration transport.',
+          tags: ['org', 'team'],
+          category: 'architecture',
+        },
+      }),
+    );
+    expect(stored.filePath).toContain(path.join('org', 'org-vault'));
+  });
+
+  it('search_index reflects newly stored memories', async () => {
+    await client.callTool({
+      name: 'store_memory',
+      arguments: {
+        title: 'Search Target Unique',
+        content: 'A memory that should be discoverable via search_index.',
+        tags: ['searchable'],
+        category: 'knowledge',
+      },
+    });
+
+    const found = json(
+      await client.callTool({
+        name: 'search_index',
+        arguments: { query: 'search target unique' },
+      }),
+    );
+    expect(Array.isArray(found.results)).toBe(true);
+    expect(found.results.some((r: any) => /search-target-unique/.test(r.key))).toBe(true);
+  });
+
+  it('rejects a duplicate key when force is not set', async () => {
+    const args = {
+      title: 'Dup Memory',
+      content: 'First write.',
+      tags: ['dup'],
+      category: 'knowledge',
+    };
+    const first = await client.callTool({ name: 'store_memory', arguments: args });
+    expect(first.isError).toBeFalsy();
+    const second = await client.callTool({ name: 'store_memory', arguments: args });
+    expect(second.isError).toBe(true);
+    expect(text(second)).toContain('already exists');
+  });
+
+  it('get_stats reports a non-empty vault', async () => {
+    const stats = json(await client.callTool({ name: 'get_stats', arguments: {} }));
+    expect(stats.total).toBeGreaterThan(0);
+  });
+
+  it('list_memories returns the stored entries', async () => {
+    const listed = json(await client.callTool({ name: 'list_memories', arguments: {} }));
+    expect(Array.isArray(listed.memories)).toBe(true);
+    expect(listed.memories.length).toBeGreaterThan(0);
+  });
+});
