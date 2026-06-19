@@ -24,14 +24,17 @@ export function storeMemory(args: any): any {
   const catDir = isOrg
     ? path.join(ORG_VAULT, category)
     : path.join(PERSONAL_VAULT, category);
-  const filePath = path.join(catDir, `${slug}.md`);
+  // `category` is caller-supplied but is containment-checked below (resolved must
+  // stay inside the vault root) BEFORE any disk write; the guard runs before
+  // ensureDir. Reviewed path-traversal finding; suppressed inline.
+  const filePath = path.join(catDir, `${slug}.md`); // nosemgrep: path-join-resolve-traversal — containment-guarded below.
   const key = keyFromPath(filePath, isOrg);
   // Path-containment guard: `category` is caller-supplied, so a value like
   // "../.." resolves outside the vault and would write an arbitrary file — and,
   // via ensureDir below, create an arbitrary directory. Resolve and confirm the
   // final path stays inside the chosen vault BEFORE creating anything on disk.
   const vaultRoot = path.resolve(isOrg ? ORG_VAULT : PERSONAL_VAULT);
-  const resolved = path.resolve(filePath);
+  const resolved = path.resolve(filePath); // nosemgrep: path-join-resolve-traversal — contained by the guard immediately below.
   if (resolved !== vaultRoot && !resolved.startsWith(vaultRoot + path.sep)) {
     throw new Error(`Invalid category "${category}": resolves outside the vault.`);
   }

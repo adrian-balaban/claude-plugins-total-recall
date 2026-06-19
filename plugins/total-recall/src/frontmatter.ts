@@ -135,6 +135,7 @@ function parseYamlish(body: string): Record<string, unknown> {
     if (Array.isArray(v) && v.length === 0 && !hadBlockItems(body, k)) {
       // Keep empty arrays only if explicitly written as `[]`; a bare `key:` with
       // no items is treated as absent.
+      // nosemgrep: detect-non-literal-regexp — key is escapeRegExp()'d, so it matches literally; reviewed.
       if (!new RegExp(`^${escapeRegExp(k)}:\\s*\\[\\s*\\]\\s*$`, 'm').test(body)) delete data[k];
     }
   }
@@ -149,6 +150,7 @@ function lastArrayKey(data: Record<string, unknown>): string | null {
 
 function hadBlockItems(body: string, key: string): boolean {
   // True if `key:` is followed by indented "- " items before the next non-indented line.
+  // nosemgrep: detect-non-literal-regexp — key is escapeRegExp()'d, so it matches literally; reviewed.
   const re = new RegExp(`^${escapeRegExp(key)}:\\s*\\n(\\s+-\\s+.+\\n)+`, 'm');
   return re.test(body);
 }

@@ -28,6 +28,7 @@ function atomicWrite(p: string, data: string) {
 function loadIndex<T extends Record<string, unknown>>(target: T, p: string) {
   // Clear-then-populate the shared singleton (formerly `target = JSON.parse(...)`).
   for (const k of Object.keys(target)) delete (target as any)[k];
+  // nosemgrep: insecure-object-assign — `p` is the plugin's OWN index.json (plugin-written, not user input); reviewed.
   try { Object.assign(target, JSON.parse(fs.readFileSync(p, 'utf8'))); } catch { /* empty */ }
 }
 

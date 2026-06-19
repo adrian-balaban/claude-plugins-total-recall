@@ -46,7 +46,10 @@ export function reconcileIndex() {
     let entries: fs.Dirent[];
     try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of entries) {
-      const fp = path.join(dir, e.name);
+      // `e.name` is a filesystem-discovered entry from readdirSync (excludes
+      // `.`/`..`; filenames can't contain `/`), and `dir` is vault-rooted by the
+      // walk. Not caller-supplied. Reviewed path-traversal finding; suppressed inline.
+      const fp = path.join(dir, e.name); // nosemgrep: path-join-resolve-traversal — filesystem-discovered name, vault-rooted walk.
       if (e.isDirectory()) {
         if (!EXCLUDED_DIRS.has(e.name.toLowerCase())) walk(fp, isOrg);
       } else if (e.name.endsWith('.md')) {
