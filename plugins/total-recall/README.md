@@ -115,7 +115,7 @@ npm run build
 claude mcp add-json total-recall '{"type":"stdio","command":"node","args":["'$(pwd)'/dist/index.js"]}'
 ```
 
-Installed as a Claude Code **plugin** (recommended), `hooks/hooks.json` and `.mcp.json` are auto-loaded — no manual MCP registration or hook wiring needed. For guided first-run setup (vault dirs, MCP registration, org vault, vector search), run the **`init`** skill — it's state-aware and safe to re-run. For standalone (non-plugin) installs that need manual hook wiring, see the **`setup`** skill.
+Installed as a Claude Code **plugin** (recommended), `hooks/hooks.json` and `.mcp.json` are auto-loaded — no manual MCP registration or hook wiring needed. For guided setup (vault dirs, MCP registration, org vault, vector search, standalone hook wiring), run the **`install`** skill — it's state-aware and safe to re-run.
 
 ## Data Locations
 
@@ -215,7 +215,7 @@ Four implementations share the "total-recall" name or solve the same problem. He
 | | **This plugin** | **strvmarv** | **davegoldblatt** | **thedotmack** |
 |---|---|---|---|---|
 | Hooks | SessionStart, PostToolUse, PreCompact | UserPromptSubmit | SessionStart, PreCompact | 5-stage pipeline |
-| Skills | 3 (memory-workflow, setup, init) | Auto-discovered | 10 slash commands | 1 (mem-search) |
+| Skills | 2 (memory-workflow, install) | Auto-discovered | 10 slash commands | 1 (mem-search) |
 | Auto-capture | LLM extracts 0–3 learnings at PreCompact | Compaction + decay | PreCompact timestamp only | Captures everything automatically |
 | Token injection | Memory index + open questions at SessionStart | Pinned tier (always) + Hot tier (4 000-token budget) | CLAUDE.local.md (~1 500 words) | Filtered search results |
 
