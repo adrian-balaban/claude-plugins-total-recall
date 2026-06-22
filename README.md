@@ -10,11 +10,11 @@ Personal Claude Code plugin repository. Registered in `~/.claude/settings.json` 
 
 Claude saves memories automatically — no explicit request needed — when:
 
-- **Observații de lucru** — preferințe de stil, abordări validate, ce a funcționat vs. ce nu
-- **Context de proiect non-obvios** — motivații, constrângeri externe, decizii non-triviale
-- **La finalul sesiunii** — întreabă explicit: "e ceva din astăzi pe care să-l rețin?"
+- **Work observations** — style preferences, validated approaches, what worked vs. what didn't
+- **Non-obvious project context** — motivations, external constraints, non-trivial decisions
+- **At session end** — ask explicitly: "is there anything from today I should remember?"
 
-Nu se salvează: cod, arhitectură, path-uri de fișiere, istoricul git (derivabile din repo).
+Not saved: code, architecture, file paths, git history (derivable from the repo).
 
 ## Three ways to call total-recall tools
 
