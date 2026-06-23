@@ -45,8 +45,11 @@ export function getMemoriesByKeys(args: any): any {
       try {
         const raw = fs.readFileSync(meta.filePath, 'utf8');
         content = parseFrontmatter(raw).content; // strip YAML frontmatter
+        // Only cache successful reads — a transient failure must not poison the
+        // LRU with '' for 30 min (every later get_memories_by_keys(full) on this
+        // key would return empty until the entry expires/evicts).
+        contentCache.set(key, content!);
       } catch { content = ''; }
-      contentCache.set(key, content!);
     }
     return { ...meta, key, content };
   });

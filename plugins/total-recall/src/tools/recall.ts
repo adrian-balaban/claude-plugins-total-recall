@@ -74,8 +74,11 @@ export async function recallMemory(args: any): Promise<any> {
         try {
           const raw = fs.readFileSync(meta.filePath, 'utf8');
           content = parseFrontmatter(raw).content; // strip YAML frontmatter
+          // Only cache successful reads — a transient read failure (race, lock)
+          // must not poison the LRU with '' for 30 min, or every later full recall
+          // returns empty content until the entry expires/evicts.
+          contentCache.set(r.key, content!);
         } catch { content = ''; }
-        contentCache.set(r.key, content!);
       }
       return { ...meta, content, score: r.score };
     }

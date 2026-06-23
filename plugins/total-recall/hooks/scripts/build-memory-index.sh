@@ -41,14 +41,25 @@ process_vault() {
       fi
       [ $in_fm -eq 0 ] && continue
       case "$fmline" in
-        title:*) title="${fmline#title: }" ;;
-        tags:*)  tags="${fmline#tags: }" ;;
+        title:*) title="${fmline#title: }"
+                 # frontmatter.ts serializes string scalars as "..." — strip one
+                 # pair of surrounding quotes so the cache title matches what
+                 # list_memories returns (otherwise the injected index shows
+                 # "Protected Org" with the literal quote characters).
+                 title="${title#\"}"; title="${title%\"}"
+                 title="${title#\'}"; title="${title%\'}" ;;
+        tags:*)  tags="${fmline#tags: }"
+                 # inline arrays serialize as [a, b, c] — strip the brackets so
+                 # the cache doesn't render "[kafka,  streaming]" with artifacts.
+                 tags="${tags#\[}"; tags="${tags%\]}" ;;
       esac
     done < "$mdfile"
 
     [ -z "$title" ] && title=$(basename "$key")
     title="${title:0:40}"
-    tags_short=$(echo "$tags" | awk -F',' '{for(i=1;i<=NF&&i<=3;i++) printf "%s%s",$i,(i<NF&&i<3?", ":""); if(NF>3) printf ", ..."}')
+    # Trim each tag (strip the leading space left after comma-splitting) so the
+    # cache shows "kafka, streaming" not "kafka,  streaming".
+    tags_short=$(echo "$tags" | awk -F',' '{for(i=1;i<=NF&&i<=3;i++){gsub(/^[ \t]+|[ \t]+$/,"",$i); printf "%s%s",$i,(i<NF&&i<3?", ","")} if(NF>3) printf ", ..."}')
 
     echo "- $key: $title [$tags_short] ($category)" >> "$TMP"
     COUNT=$((COUNT + 1))

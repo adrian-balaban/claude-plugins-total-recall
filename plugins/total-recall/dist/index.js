@@ -16105,10 +16105,10 @@ async function recallMemory(args) {
         try {
           const raw = fs6.readFileSync(meta2.filePath, "utf8");
           content = parseFrontmatter(raw).content;
+          contentCache.set(r.key, content);
         } catch {
           content = "";
         }
-        contentCache.set(r.key, content);
       }
       return { ...meta2, content, score: r.score };
     }
@@ -16171,10 +16171,10 @@ function getMemoriesByKeys(args) {
       try {
         const raw = fs7.readFileSync(meta2.filePath, "utf8");
         content = parseFrontmatter(raw).content;
+        contentCache.set(key, content);
       } catch {
         content = "";
       }
-      contentCache.set(key, content);
     }
     return { ...meta2, key, content };
   });
