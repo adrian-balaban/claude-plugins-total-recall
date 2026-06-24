@@ -88,10 +88,11 @@ org:      same but prefixed with "org/"
 ```
 main()
  ├─ ensureDir(PERSONAL_VAULT, ORG_VAULT)
+ ├─ ensureDir(<PERSONAL_VAULT>/<each DEFAULT_CATEGORIES>)
  ├─ loadIndexes()        ← reads index.json + invertedIndex.json into shared singletons
- ├─ if memIndex is empty → reconcileIndex()   ← full vault scan
+ ├─ reconcileIndex()     ← always; full vault scan, preserves accessCount/lastAccessed
  ├─ rebuildInvertedIndex()
- ├─ buildIndexCache()    ← writes .index-cache.txt
+ ├─ scheduleSave()       ← debounced 1s → index.json, then +2s → IDF recalc + buildIndexCache
  └─ server.connect(StdioServerTransport)
 ```
 
@@ -119,15 +120,15 @@ On `SIGTERM` / `SIGINT` / `beforeExit`: `flushPending()` writes any debounced ch
 | Tool | Description |
 |---|---|
 | `list_memories` | Paginated metadata listing with category/tag filter |
-| `get_related_memories` | Tag-overlap similarity for a given key |
+| `get_related_memories` | Jaccard tag similarity + same-category boost (0.2); requires ≥1 shared tag |
 | `get_timeline` | Memories in date range, ordered by `updated` |
-| `get_stats` | Index counts, cache stats, perf samples, recent errors |
+| `get_stats` | Total + by-category counts, cache stats, perf percentiles, recent errors, vectorSearchEnabled |
 
 ### Maintenance
 | Tool | Description |
 |---|---|
 | `rebuild_index` | `reconcileIndex()` + rebuild TF-IDF; preserves `accessCount`/`lastAccessed` |
-| `prune_memories` | Delete memories below an importance + recency threshold |
+| `prune_memories` | **List** low-retention candidates (Ebbinghaus strength < threshold); does NOT delete |
 
 ---
 
@@ -191,10 +192,13 @@ query
   │    └─ reciprocalRankFusion([tfidfResults, vecResults], k=60)
   │              └─ score(d) = Σ 1/(60 + rank(d))  across both lists
   │
-  ├─ filter by `since` date (optional)
+  ├─ if excludeJournal → re-filter journal entries
+  │    (hybrid fusion can surface them via the vector rank even when tfidfSearch excluded them)
+  ├─ filter by `since` / `before` date (optional; `before` is an exclusive upper bound,
+  │    combinable with `since` for a date range)
   ├─ slice to `limit`
   └─ for each result:
-       ├─ meta.accessCount++
+       ├─ meta.accessCount++; meta.lastAccessed = now
        ├─ scheduleSave()
        └─ if full=true → read file through LRU cache → return with content
           else         → return metadata + score only
@@ -209,7 +213,7 @@ The retention strength formula models the forgetting curve:
 decay = importance × exp(−λ × daysSince)  × (1 + accessCount × 0.2)
 ```
 
-A memory with `importanceScore=1.0` has `λ=0.032` (slow decay); one with `importanceScore=0.3` has `λ=0.136` (fast decay). Each access adds 20% strength on top.
+A memory with `importanceScore=1.0` has `λ=0.032` (slow decay); one with `importanceScore=0.3` has `λ=0.122` (fast decay). Each access adds 20% strength on top.
 
 ---
 
@@ -265,7 +269,7 @@ Hooks are declared in `hooks/hooks.json` and executed by the Claude Code harness
 
 ```
 1. pull-org-vault.sh       — git pull on org vault branch (if configured)
-2. build-memory-index.sh   — runs rebuild_index via MCP (updates .index-cache.txt)
+2. build-memory-index.sh   — standalone awk scan of frontmatter → .index-cache.txt (no MCP)
 3. load-memory-index.sh    — cat .index-cache.txt → injected into context
 4. load-open-questions.sh  — cat open-questions.md → injected into context
 ```
@@ -279,8 +283,10 @@ Hooks are declared in `hooks/hooks.json` and executed by the Claude Code harness
 ### `PostToolUse` (matcher: `store_memory|update_memory|delete_memory`)
 
 ```
-sync-org-memory.sh  — if the affected memory is tagged `org`:
+sync-org-memory.sh  — fires on EVERY store/update/delete (the matcher triggers it
+                       unconditionally); delegates the `org`-tag gate to the .cjs:
                        apply privacy filter → git add/commit/push org-vault branch
+                     — also re-runs build-memory-index.sh to refresh .index-cache.txt
 ```
 
 ### `PreCompact`
