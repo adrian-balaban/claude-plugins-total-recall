@@ -8,11 +8,11 @@ import { scheduleSave } from '../persistence.js';
 import { isVectorAvailable } from '../embeddings.js';
 
 export function listMemories(args: any): any {
-  const { category, tag, limit = 50 } = args;
+  const { category, tag, limit = 50, offset = 0 } = args;
   return Object.values(memIndex)
     .filter(m => (!category || m.category === category) && (!tag || m.tags.includes(tag)))
     .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
-    .slice(0, limit)
+    .slice(offset, offset + limit)
     .map(({ key, title, category, tags, updated, importanceScore, tokenEstimate }) => ({
       key, title, category, tags, updated, importanceScore, tokenEstimate,
     }));
@@ -73,14 +73,14 @@ export function getStats(): any {
 }
 
 export function getTimeline(args: any): any {
-  const { since, before, limit = 50, category } = args;
+  const { since, before, limit = 50, offset = 0, category } = args;
   const cutoff = since ? (parseRelativeDate(since) ?? new Date(since)) : new Date(0);
   // Symmetric upper bound — mirrors `since`; combine for a date-range window.
   const upper = before ? (parseRelativeDate(before) ?? new Date(before)) : null;
   return Object.values(memIndex)
     .filter(m => new Date(m.updated) >= cutoff && (!upper || new Date(m.updated) < upper) && (!category || m.category === category))
     .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
-    .slice(0, limit)
+    .slice(offset, offset + limit)
     .map(m => ({ key: m.key, title: m.title, category: m.category, tags: m.tags, updated: m.updated }));
 }
 

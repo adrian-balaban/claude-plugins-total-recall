@@ -16158,8 +16158,8 @@ function searchIndex(args) {
 // src/tools/query.ts
 var fs7 = __toESM(require("fs"));
 function listMemories(args) {
-  const { category, tag, limit = 50 } = args;
-  return Object.values(memIndex).filter((m) => (!category || m.category === category) && (!tag || m.tags.includes(tag))).sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()).slice(0, limit).map(({ key, title, category: category2, tags, updated, importanceScore, tokenEstimate: tokenEstimate2 }) => ({
+  const { category, tag, limit = 50, offset = 0 } = args;
+  return Object.values(memIndex).filter((m) => (!category || m.category === category) && (!tag || m.tags.includes(tag))).sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()).slice(offset, offset + limit).map(({ key, title, category: category2, tags, updated, importanceScore, tokenEstimate: tokenEstimate2 }) => ({
     key,
     title,
     category: category2,
@@ -16218,10 +16218,10 @@ function getStats() {
   };
 }
 function getTimeline(args) {
-  const { since, before, limit = 50, category } = args;
+  const { since, before, limit = 50, offset = 0, category } = args;
   const cutoff = since ? parseRelativeDate(since) ?? new Date(since) : /* @__PURE__ */ new Date(0);
   const upper = before ? parseRelativeDate(before) ?? new Date(before) : null;
-  return Object.values(memIndex).filter((m) => new Date(m.updated) >= cutoff && (!upper || new Date(m.updated) < upper) && (!category || m.category === category)).sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()).slice(0, limit).map((m) => ({ key: m.key, title: m.title, category: m.category, tags: m.tags, updated: m.updated }));
+  return Object.values(memIndex).filter((m) => new Date(m.updated) >= cutoff && (!upper || new Date(m.updated) < upper) && (!category || m.category === category)).sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime()).slice(offset, offset + limit).map((m) => ({ key: m.key, title: m.title, category: m.category, tags: m.tags, updated: m.updated }));
 }
 function getRelatedMemories(args) {
   const { key, limit = 10, includeContent = false } = args;
@@ -16368,7 +16368,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           category: { type: "string" },
           tag: { type: "string" },
-          limit: { type: "number", default: 50 }
+          limit: { type: "number", default: 50 },
+          offset: { type: "number", default: 0, description: "Skip the first N results (for pagination; combine with limit)." }
         }
       }
     },
@@ -16443,6 +16444,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           since: { type: "string", description: "Relative or ISO date. Lower bound on updated." },
           before: { type: "string", description: "Relative or ISO date. Upper bound on updated (exclusive); combine with since for a date range." },
           limit: { type: "number", default: 50 },
+          offset: { type: "number", default: 0, description: "Skip the first N results (for pagination; combine with limit)." },
           category: { type: "string" }
         }
       }

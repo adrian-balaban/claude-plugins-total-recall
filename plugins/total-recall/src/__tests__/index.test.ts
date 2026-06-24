@@ -278,6 +278,14 @@ describe('list_memories', () => {
     expect(res.length).toBeLessThanOrEqual(1);
   });
 
+  it('offset skips the first N results (pagination)', async () => {
+    const page0 = result(await callTool('list_memories', { limit: 50 }));
+    const page1 = result(await callTool('list_memories', { limit: 50, offset: 1 }));
+    // offset:1 drops exactly the newest entry; the rest of the page shifts up.
+    expect(page1.length).toBe(page0.length - 1);
+    expect(page1[0].key).toBe(page0[1].key);
+  });
+
   it('returns metadata only (no content field)', async () => {
     const res = result(await callTool('list_memories'));
     expect(res[0].content).toBeUndefined();
@@ -507,6 +515,13 @@ describe('get_timeline', () => {
   it('respects limit', async () => {
     const res = result(await callTool('get_timeline', { limit: 1 }));
     expect(res.length).toBeLessThanOrEqual(1);
+  });
+
+  it('offset skips the first N results (pagination)', async () => {
+    const page0 = result(await callTool('get_timeline', { limit: 50 }));
+    const page1 = result(await callTool('get_timeline', { limit: 50, offset: 1 }));
+    expect(page1.length).toBe(page0.length - 1);
+    expect(page1[0].key).toBe(page0[1].key);
   });
 });
 
